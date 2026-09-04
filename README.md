@@ -257,6 +257,36 @@ vez de pisar ese cambio.
 **Ojo con `productos.js`**: desde que lo escribe el panel, editarlo a mano se
 pierde en el siguiente guardado.
 
+### Editor visual (`editor.html`)
+
+La misma tienda que ve el cliente, pero editable. No es una copia de la página:
+es `tienda.html` dentro de un iframe. Al editar, el editor muta el catálogo que
+vive en ese iframe y llama a `GNTienda.repintar()`, que es el mismo render de la
+tienda. Por eso lo que ves mientras editas es exactamente lo que verá el
+público, y no hay una segunda plantilla que se pueda desincronizar.
+
+Clic en cualquier producto y se abre a un lado: nombre, descripción, precio,
+medidas, piezas por caja, materiales, destacado, agotado y la oferta (descuento,
+etiqueta, vigencia). El cambio se ve en la tarjeta al instante; guardar es el
+mismo commit a GitHub que el panel de lista.
+
+`admin.html` (lista densa, para mover muchos productos de golpe) y `editor.html`
+(visual, para ver cómo queda) comparten sesión y endpoints. Se pasa de uno a
+otro con el botón de la barra.
+
+### Mapa de calor
+
+El editor puede pintar sobre cada tarjeta cuántas veces se vio, se le hizo clic
+o se agregó al carrito. Los datos los junta `pulso.js` en la tienda pública con
+`sendBeacon`: manda **solo el id del producto y el tipo de evento**, sin cookies
+ni nada que identifique a la persona. Una tarjeta cuenta como "vista" cuando de
+verdad entra en pantalla, no cuando carga la página.
+
+Los conteos viven en memoria del servidor (`/api/pulso` para escribir,
+`/api/admin/pulso` para leer, con token). Un reinicio los pone en cero: es una
+señal de tendencia, no una contabilidad. Empieza vacío y se llena solo conforme
+la gente use la tienda.
+
 ### Control de gasto
 
 Tres números, todos en el encabezado de `php/chat.php`:

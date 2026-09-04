@@ -513,6 +513,55 @@ async def admin_guardar(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# el pulso: qué productos mira la gente
+#
+# Alimenta el mapa de calor del editor. Solo se cuentan eventos por id de
+# producto: no hay cookies, ni sesiones, ni nada que identifique a la persona.
+# Vive en memoria, así que un reinicio del servicio lo pone en cero; es una
+# señal de tendencia, no una contabilidad.
+# ---------------------------------------------------------------------------
+
+TIPOS_PULSO = ("ver", "click", "carrito")
+MAX_IDS = 500   # techo de memoria: nadie va a tener más productos que eso
+
+_pulso: dict[str, dict[str, int]] = {}
+_pulso_desde = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+@app.post("/api/pulso")
+async def pulso(request: Request):
+    try:
+        cuerpo = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=204)
+
+    if not isinstance(cuerpo, dict):
+        return JSONResponse({"ok": False}, status_code=204)
+
+    pid = texto(cuerpo.get("id"), 80)
+    tipo = texto(cuerpo.get("tipo"), 20)
+    if not pid or tipo not in TIPOS_PULSO:
+        return JSONResponse({"ok": False}, status_code=204)
+
+    with _candado:
+        if pid not in _pulso and len(_pulso) >= MAX_IDS:
+            return JSONResponse({"ok": False}, status_code=204)
+        fila = _pulso.setdefault(pid, {"ver": 0, "click": 0, "carrito": 0})
+        fila[tipo] += 1
+
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/admin/pulso")
+async def admin_pulso(token: str = ""):
+    if not token_valido(token):
+        return JSONResponse({"error": "sesion_vencida"}, status_code=401)
+    with _candado:
+        datos = {k: dict(v) for k, v in _pulso.items()}
+    return JSONResponse({"desde": _pulso_desde, "productos": datos})
+
+
+# ---------------------------------------------------------------------------
 # el sitio
 # ---------------------------------------------------------------------------
 

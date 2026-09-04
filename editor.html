@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Editor visual | GreeNova SC</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* El editor no es una página nueva: es la tienda de verdad dentro de un
+     iframe, con una barra arriba y un panel a un lado. Por eso aquí casi no hay
+     estilos de producto — los pone la propia tienda. */
+  body { margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  .ed__barra {
+    display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+    padding: .7rem clamp(.75rem, 2vw, 1.25rem);
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .ed__barra h1 { font-size: 1rem; margin: 0; }
+  .ed__sub { font-size: .78rem; color: var(--ink-2); }
+  .ed__sep { flex: 1; }
+  .ed__acciones { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+
+  .ed__cuerpo { flex: 1; display: flex; min-height: 0; }
+  .ed__lienzo { flex: 1; position: relative; background: var(--bg); }
+  .ed__lienzo iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .ed__panel {
+    width: 340px; flex: 0 0 340px; overflow-y: auto;
+    border-left: 1px solid var(--line); background: var(--surface);
+    padding: 1rem clamp(.75rem, 1.4vw, 1.1rem) 3rem;
+  }
+  .ed__panel[hidden] { display: none; }
+  .ed__nada { color: var(--ink-2); font-size: .9rem; padding: 2rem .5rem; text-align: center; }
+
+  .ed__campo { margin-bottom: .85rem; }
+  .ed__campo > span, .ed__campo > label > span {
+    display: block; font-size: .6875rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: .3rem;
+  }
+  .ed__panel input[type="text"], .ed__panel input[type="number"], .ed__panel input[type="date"],
+  .ed__panel select, .ed__panel textarea {
+    font: inherit; font-size: .875rem; width: 100%; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .ed__panel textarea { min-height: 70px; resize: vertical; }
+  .marca { display: flex; align-items: center; gap: .45rem; font-size: .875rem; margin-bottom: .5rem; }
+  .marca input { width: auto; }
+  .ed__mats { display: flex; flex-wrap: wrap; gap: .3rem .8rem; }
+
+  .ed__aviso { padding: .6rem .8rem; border-radius: 10px; font-size: .82rem; margin: 0 0 .8rem; }
+  .ed__aviso[data-tipo="ok"] { background: var(--tint-accent); color: var(--forest); }
+  .ed__aviso[data-tipo="error"] { background: #fdecec; color: #8a2222; }
+  :root[data-theme="dark"] .ed__aviso[data-tipo="error"] { background: #3a1c1c; color: #ffb4b4; }
+
+  .ed__leyenda {
+    position: absolute; left: 1rem; bottom: 1rem; z-index: 5;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-tile); padding: .6rem .8rem; font-size: .78rem;
+    box-shadow: var(--shadow-md); max-width: 260px;
+  }
+  .ed__leyenda b { display: block; margin-bottom: .35rem; font-size: .82rem; }
+  .ed__escala { display: flex; height: 8px; border-radius: 99px; overflow: hidden; margin: .4rem 0 .3rem; }
+  .ed__escala i { flex: 1; }
+
+  .entrar { max-width: 380px; margin: 12vh auto; padding: 1.6rem;
+            border: 1px solid var(--line); border-radius: var(--r-tile); background: var(--surface); }
+  .entrar h1 { font-size: 1.4rem; margin-bottom: .4rem; }
+  .entrar p { color: var(--ink-2); font-size: .9375rem; margin-bottom: 1.2rem; }
+  .entrar input { font: inherit; width: 100%; padding: 10px 12px; border-radius: 10px;
+                  border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin-bottom: .9rem; }
+
+  @media (max-width: 900px) {
+    .ed__cuerpo { flex-direction: column; }
+    .ed__panel { width: auto; flex: 0 0 46%; border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<section class="entrar" id="entrar">
+  <h1>Editor visual</h1>
+  <p>La tienda tal como la ve el cliente, pero editable.</p>
+  <form id="form-entrar">
+    <input type="password" id="clave" placeholder="Contraseña" autocomplete="current-password" required>
+    <p class="ed__aviso" id="aviso-entrar" data-tipo="error" hidden></p>
+    <button class="btn btn--primary" type="submit"><span class="btn__label">Entrar</span></button>
+  </form>
+</section>
+
+<header class="ed__barra" id="barra" hidden>
+  <div>
+    <h1>Editor de la tienda</h1>
+    <p class="ed__sub" id="resumen">Cargando…</p>
+  </div>
+  <div class="ed__sep"></div>
+  <div class="ed__acciones">
+    <label class="marca" style="margin:0"><input type="checkbox" id="ver-calor"> Mapa de calor</label>
+    <select id="que-mide" style="font:inherit;font-size:.82rem;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)">
+      <option value="click">Clics en la ficha</option>
+      <option value="ver">Veces que se vio</option>
+      <option value="carrito">Agregados al carrito</option>
+    </select>
+    <a class="btn btn--ghost btn--sm" href="admin.html"><span class="btn__label">Vista de lista</span></a>
+    <button class="btn btn--primary btn--sm" type="button" id="btn-guardar" disabled>
+      <span class="btn__label">Guardar cambios</span>
+    </button>
+  </div>
+</header>
+
+<div class="ed__cuerpo" id="cuerpo" hidden>
+  <div class="ed__lienzo">
+    <iframe id="tienda" src="tienda.html" title="Tienda GreeNova"></iframe>
+    <div class="ed__leyenda" id="leyenda" hidden>
+      <b>Mapa de calor</b>
+      <span id="leyenda-texto">Sin datos todavía.</span>
+      <div class="ed__escala">
+        <i style="background:var(--line)"></i><i style="background:#cfe6c0"></i>
+        <i style="background:#9bce89"></i><i style="background:#f0b429"></i><i style="background:#e2603b"></i>
+      </div>
+      <span class="ed__sub">menos ← interés → más</span>
+    </div>
+  </div>
+
+  <aside class="ed__panel" id="panel">
+    <p class="ed__aviso" id="aviso" hidden></p>
+    <p class="ed__nada" id="nada">Haz clic en cualquier producto de la tienda para editarlo aquí.</p>
+    <div id="form" hidden></div>
+  </aside>
+</div>
+
+<script src="editor.js"></script>
+</body>
+</html>

@@ -689,4 +689,10 @@
       if (field && field.dataset.invalid === "true") setError(e.target.id, "");
     });
   }
+
+  /* El editor del panel abre esta misma página dentro de un iframe y, cuando
+     cambias un precio o marcas un agotado, muta el catálogo y llama a repintar.
+     Así lo que ves editando es exactamente lo que ve el cliente: no hay una
+     segunda plantilla que se pueda desincronizar. */
+  window.GNTienda = { repintar: render };
 })();

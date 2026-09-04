@@ -1,7 +1,7 @@
 <?php
 /* GreeNova SC - cuánto lleva gastado el agente hoy.
    ===========================================================================
-   El contador que escribe api/chat.php vive fuera de public_html, así que no se
+   El contador que escribe php/chat.php vive fuera de public_html, así que no se
    puede abrir por URL. Este archivo es la única ventana a ese dato, y viene
    apagado: solo responde si defines una clave en el archivo de secretos.
 
@@ -12,7 +12,7 @@
      ];
 
    Luego lo consultas así:
-     https://www.greenovasc.com.mx/api/gasto.php?token=una-palabra-larga...
+     https://www.greenovasc.com.mx/php/gasto.php?token=una-palabra-larga...
 
    Sin GASTO_TOKEN definido responde 404, como si el archivo no existiera.
    =========================================================================== */

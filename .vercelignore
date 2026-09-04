@@ -1,8 +1,8 @@
-# Vercel ejecuta Node, no PHP. Los .php son para Hostinger, y si se suben aquí
-# Vercel los toma como funciones: "api/chat.php" y "api/chat.js" resuelven a la
-# misma ruta /api/chat y el build falla con "conflicting paths".
-api/chat.php
-api/gasto.php
+# Los .php son para Hostinger; Vercel ejecuta Node. Están fuera de api/ para
+# que no choquen con api/chat.js (Vercel trata api/ como funciones, y ahí
+# chat.php y chat.js serían la misma ruta /api/chat), y además se excluyen del
+# deploy para no publicar su código fuente.
+php/
 
 # Apache: en Vercel no hace nada.
 .htaccess

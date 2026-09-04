@@ -31,7 +31,7 @@ const MODELO = process.env.OPENAI_MODEL || "gpt-4o-mini";
 /* Tokens de respuesta por pregunta. Con 400 alcanzan cinco o seis frases; los
    criterios piden dos o tres, así que sobra margen.
 
-   OJO: el tope de preguntas por día vive en api/chat.php, que es el que corre
+   OJO: el tope de preguntas por día vive en php/chat.php, que es el que corre
    en Hostinger. Aquí no se puede contar igual porque cada invocación de Vercel
    arranca en frío y no comparte disco: si algún día se despliega en Vercel, el
    contador tendría que ser Redis, KV o la base que se use entonces. */

@@ -211,6 +211,6 @@ window.GREENOVA_AGENTE = (function () {
     /* Dónde vive la función que guarda la API key. Hostinger corre PHP y Vercel
        corre Node, así que cada uno tiene su archivo y aquí se elige por dominio.
        El mismo código funciona en los dos sin tocar nada. Ver README. */
-    ENDPOINT: /(^|\.)vercel\.app$/.test(location.hostname) ? "/api/chat" : "/api/chat.php"
+    ENDPOINT: /(^|\.)vercel\.app$/.test(location.hostname) ? "/api/chat" : "/php/chat.php"
   };
 })();

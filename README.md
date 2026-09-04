@@ -107,7 +107,7 @@ que permite el flujo `git push` → Hostinger sin que se rompa nada.
 **Se sube:** los cuatro `.html`, `styles.css`, `greenova.js`, `productos.js`,
 `tienda.js`, `producto.js`, `serigrafia.js`, `agente.js`, `agente-criterios.js`, `assets/`,
 `favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `site.webmanifest`,
-`robots.txt`, `sitemap.xml`, `.htaccess`, `api/chat.php` y `api/gasto.php`.
+`robots.txt`, `sitemap.xml`, `.htaccess`, `php/chat.php` y `php/gasto.php`.
 
 **No hace falta subir** (son herramientas de desarrollo): `serve.py`,
 `build-single.py`, `build-sitemap.mjs`, `dist/`, `README.md`, `node_modules/`.
@@ -119,7 +119,7 @@ el navegador y no necesita servidor ni claves: si borras el endpoint, el agente
 sigue funcionando y, cuando no sabe, entrega el contacto de ventas.
 
 El segundo nivel sí necesita servidor, porque ahí vive la API key. Hostinger no
-ejecuta Node, pero **sí ejecuta PHP**, así que ese nivel es `api/chat.php`.
+ejecuta Node, pero **sí ejecuta PHP**, así que ese nivel es `php/chat.php`.
 
 **Dónde poner la key en Hostinger.** Nunca dentro del repositorio ni dentro de
 `public_html`. El archivo va un nivel arriba, hermano de `public_html`:
@@ -162,7 +162,7 @@ Cómo se ve impreso y no pegado encima:
 
 ### Control de gasto
 
-Tres números, todos en el encabezado de `api/chat.php`:
+Tres números, todos en el encabezado de `php/chat.php`:
 
 | Constante | Valor | Qué hace |
 |---|---|---|
@@ -180,10 +180,10 @@ uso real a OpenAI), así que el archivo sirve como bitácora del día. Para verl
 sin entrar por SFTP, define `GASTO_TOKEN` en el archivo de secretos y consulta:
 
 ```
-https://tudominio.com/api/gasto.php?token=TU-CLAVE
+https://tudominio.com/php/gasto.php?token=TU-CLAVE
 ```
 
-Sin esa clave, `api/gasto.php` responde 404. Los precios que usa para estimar el
+Sin esa clave, `php/gasto.php` responde 404. Los precios que usa para estimar el
 costo están escritos en ese archivo: verifícalos contra la página de precios de
 OpenAI, porque cambian.
 
@@ -194,12 +194,13 @@ el nivel de IA hace falta subirlo a Hostinger, o levantar `php -S` si tienes PHP
 `api/chat.js` es la misma función para Vercel (Node). No hay que elegir: el
 `ENDPOINT` en `agente-criterios.js` se decide por dominio, así que en un dominio
 `*.vercel.app` usa `/api/chat` y en cualquier otro (Hostinger) usa
-`/api/chat.php`.
+`/php/chat.php`.
 
-`.vercelignore` saca los `.php` del deploy de Vercel. Sin eso el build falla:
-Vercel toma todo lo que hay en `api/` como funciones, y `chat.php` y `chat.js`
-resuelven a la misma ruta `/api/chat` ("conflicting paths"). Hostinger, al
-revés, simplemente ignora el `.js`.
+Los `.php` viven en `php/`, no en `api/`, **a propósito**: Vercel trata todo lo
+que está en `api/` como funciones serverless, y ahí `chat.php` y `chat.js`
+resuelven a la misma ruta `/api/chat`, con lo que el build falla entero
+("conflicting paths"). Fuera de `api/` no hay conflicto posible. Además
+`.vercelignore` los saca del deploy. Hostinger, al revés, ignora el `.js`.
 
 `vercel.json` y `package.json` son inofensivos si se suben; Hostinger los ignora.
 

@@ -1,0 +1,12 @@
+# GreeNova SC — www.greenovasc.com.mx
+User-agent: *
+Allow: /
+
+# La ficha de producto es una plantilla: lo que la hace única es el ?id=.
+# Sin esta línea, algunos rastreadores tratan la query como duplicado.
+Allow: /producto.html
+
+# El agente no es contenido indexable.
+Disallow: /api/
+
+Sitemap: https://www.greenovasc.com.mx/sitemap.xml

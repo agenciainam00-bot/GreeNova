@@ -1,0 +1,14 @@
+{
+  "name": "GreeNova SC",
+  "short_name": "GreeNova",
+  "description": "Empaque biodegradable y compostable para el sector alimenticio.",
+  "lang": "es-MX",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f4f7f2",
+  "theme_color": "#224539",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180" }
+  ]
+}

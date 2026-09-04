@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "greenova-landing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "/Users/gabrielayala/Greenova/serve.py",
+        "4321"
+      ],
+      "port": 4321
+    }
+  ]
+}

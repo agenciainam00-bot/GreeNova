@@ -1,0 +1,15 @@
+# GreeNova SC — protección de archivos en Hostinger.
+# El sitio es estático; esto solo evita que se sirvan archivos que no son
+# páginas si por alguna razón terminan subidos al hosting.
+
+# Nada de secretos ni de herramientas de desarrollo por URL.
+<FilesMatch "^(\.env.*|.*\.py|.*\.mjs|package(-lock)?\.json|vercel\.json|README\.md)$">
+  Require all denied
+</FilesMatch>
+
+# El streaming del agente no debe quedarse atorado en un búfer intermedio.
+<IfModule mod_headers.c>
+  <Files "chat.php">
+    Header set X-Accel-Buffering "no"
+  </Files>
+</IfModule>

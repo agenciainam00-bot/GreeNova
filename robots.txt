@@ -10,3 +10,6 @@ Allow: /producto.html
 Disallow: /api/
 
 Sitemap: https://www.greenovasc.com.mx/sitemap.xml
+
+# El panel de catálogo no debe indexarse.
+Disallow: /admin.html

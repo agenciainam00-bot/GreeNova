@@ -15,3 +15,7 @@ requirements.txt
 serve.py
 build-single.py
 build-sitemap.mjs
+
+# El panel solo tiene sentido donde corre main.py (Render).
+admin.html
+admin.js

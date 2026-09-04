@@ -226,6 +226,37 @@ Recién en el quinto paso entra la IA, con los pasajes que encontró el RAG. Por
 eso el asistente sigue siendo útil aunque no haya API key: los cuatro primeros
 pasos no cuestan nada y cubren la mayoría de las preguntas reales.
 
+### Panel de catálogo (`admin.html`)
+
+Para editar productos, precios, existencias y ofertas sin tocar código. Vive en
+`/admin.html` del servicio de Render y **solo funciona ahí**, porque necesita los
+endpoints de `main.py`.
+
+Cómo guarda: el panel manda el catálogo editado al servidor, el servidor **genera
+`productos.js`** (no lo genera el navegador: así lo que se commitea siempre tiene
+la forma correcta aunque alguien manipule la petición) y lo escribe como commit
+en GitHub. Cada guardado queda versionado y dispara el redeploy solo.
+
+Variables de entorno que necesita, todas en Render:
+
+| Variable | Para qué |
+|---|---|
+| `ADMIN_PASSWORD` | la contraseña del panel |
+| `GITHUB_TOKEN` | token con permiso de escritura sobre el repo |
+| `GITHUB_REPO` | opcional, por omisión `agenciainam00-bot/GreeNova` |
+| `GITHUB_BRANCH` | opcional, por omisión `main` |
+
+El acceso no usa cookies ni base de datos: el servidor devuelve un token firmado
+con la propia contraseña que caduca a las 8 horas y vive en `sessionStorage`. Si
+cambias `ADMIN_PASSWORD`, todas las sesiones abiertas mueren.
+
+Al guardar se manda el `sha` del archivo actual, así que si alguien más cambió
+`productos.js` mientras tenías el panel abierto, GitHub rechaza el guardado en
+vez de pisar ese cambio.
+
+**Ojo con `productos.js`**: desde que lo escribe el panel, editarlo a mano se
+pierde en el siguiente guardado.
+
 ### Control de gasto
 
 Tres números, todos en el encabezado de `php/chat.php`:

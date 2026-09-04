@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel de catálogo | GreeNova SC</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* El panel es una herramienta interna: reusa los colores y la tipografía del
+     sitio, pero con densidad de tabla, no de página de venta. */
+  .adm { max-width: 1180px; margin: 0 auto; padding: clamp(1rem, 3vw, 2rem); }
+  .adm__head {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+    justify-content: space-between; padding: 1rem 0 1.1rem;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .adm__head h1 { font-size: 1.35rem; margin: 0; }
+  .adm__sub { font-size: .8125rem; color: var(--ink-2); margin-top: .15rem; }
+  .adm__acciones { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+
+  .adm__filtros {
+    display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+    padding: 1rem 0;
+  }
+  .adm input[type="text"], .adm input[type="number"], .adm input[type="date"],
+  .adm select, .adm textarea {
+    font: inherit; font-size: .875rem; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 10px; width: 100%;
+  }
+  .adm input:focus, .adm select:focus, .adm textarea:focus {
+    outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent;
+  }
+  .adm__buscar { flex: 1 1 260px; }
+  .adm__filtros select { width: auto; }
+
+  .ficha {
+    border: 1px solid var(--line); border-radius: var(--r-tile);
+    background: var(--surface); padding: 1rem; margin-bottom: .75rem;
+  }
+  .ficha[data-sucio="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(155,206,137,.18); }
+  .ficha[data-nuevo="true"] { border-style: dashed; }
+  .ficha__fila1 {
+    display: grid; grid-template-columns: minmax(0,3fr) minmax(0,1.4fr) minmax(0,1fr) auto;
+    gap: .6rem; align-items: center;
+  }
+  .ficha__mas { margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--line);
+                display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .7rem; }
+  .ficha__mas label, .ficha__promo label { display: block; }
+  .ficha__promo {
+    margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--line);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem;
+    align-items: end;
+  }
+  .campo { font-size: .6875rem; font-weight: 600; letter-spacing: .08em;
+           text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: .3rem; }
+  .marca { display: flex; align-items: center; gap: .45rem; font-size: .875rem; }
+  .marca input { width: auto; }
+  .ficha__mats { display: flex; flex-wrap: wrap; gap: .35rem .8rem; }
+  .ficha textarea { min-height: 74px; resize: vertical; }
+
+  .adm__vacio { padding: 3rem 1rem; text-align: center; color: var(--ink-2); }
+  .adm__aviso {
+    padding: .7rem .9rem; border-radius: 10px; font-size: .875rem;
+    margin-bottom: 1rem; border: 1px solid var(--line);
+  }
+  .adm__aviso[data-tipo="ok"] { background: var(--tint-accent); border-color: transparent; color: var(--forest); }
+  .adm__aviso[data-tipo="error"] { background: #fdecec; border-color: #f3c6c6; color: #8a2222; }
+  :root[data-theme="dark"] .adm__aviso[data-tipo="error"] { background: #3a1c1c; border-color: #5c2a2a; color: #ffb4b4; }
+
+  .entrar { max-width: 380px; margin: 12vh auto; padding: 1.6rem; }
+  .entrar h1 { font-size: 1.4rem; margin-bottom: .4rem; }
+  .entrar p { color: var(--ink-2); font-size: .9375rem; margin-bottom: 1.2rem; }
+  .entrar label { display: block; margin-bottom: .9rem; }
+  .entrar input { font: inherit; width: 100%; padding: 10px 12px; border-radius: 10px;
+                  border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ---------------- pantalla de acceso ---------------- -->
+<section class="entrar ficha" id="entrar">
+  <h1>Panel de catálogo</h1>
+  <p>Aquí se editan productos, precios, existencias y ofertas de GreeNova SC.</p>
+  <form id="form-entrar">
+    <label>
+      <span class="campo">Contraseña</span>
+      <input type="password" id="clave" autocomplete="current-password" required>
+    </label>
+    <p class="adm__aviso" id="aviso-entrar" hidden></p>
+    <button class="btn btn--primary" type="submit"><span class="btn__label">Entrar</span></button>
+  </form>
+</section>
+
+<!-- ---------------- el panel ---------------- -->
+<main class="adm" id="panel" hidden>
+  <header class="adm__head">
+    <div>
+      <h1>Catálogo GreeNova</h1>
+      <p class="adm__sub" id="resumen">—</p>
+    </div>
+    <div class="adm__acciones">
+      <button class="btn btn--ghost btn--sm" type="button" id="btn-respaldo">
+        <span class="btn__label">Descargar respaldo</span>
+      </button>
+      <button class="btn btn--ghost btn--sm" type="button" id="btn-nuevo">
+        <span class="btn__label">Agregar producto</span>
+      </button>
+      <button class="btn btn--primary btn--sm" type="button" id="btn-guardar" disabled>
+        <span class="btn__label">Guardar cambios</span>
+      </button>
+    </div>
+  </header>
+
+  <p class="adm__aviso" id="aviso" hidden></p>
+
+  <div class="adm__filtros">
+    <div class="adm__buscar"><input type="text" id="buscar" placeholder="Buscar por nombre, id o descripción…"></div>
+    <select id="filtro-cat"><option value="">Todas las categorías</option></select>
+    <select id="filtro-estado">
+      <option value="">Todos</option>
+      <option value="cambiados">Solo con cambios</option>
+      <option value="agotados">Solo agotados</option>
+      <option value="ofertas">Solo en oferta</option>
+      <option value="sin-precio">Sin precio</option>
+    </select>
+  </div>
+
+  <div id="lista"></div>
+  <p class="adm__vacio" id="vacio" hidden>No hay productos que coincidan.</p>
+</main>
+
+<script src="productos.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

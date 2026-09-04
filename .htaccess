@@ -3,7 +3,7 @@
 # páginas si por alguna razón terminan subidos al hosting.
 
 # Nada de secretos ni de herramientas de desarrollo por URL.
-<FilesMatch "^(\.env.*|.*\.py|.*\.mjs|package(-lock)?\.json|vercel\.json|README\.md)$">
+<FilesMatch "^(\.env.*|.*\.py|.*\.mjs|package(-lock)?\.json|vercel\.json|README\.md|admin\.(html|js))$">
   Require all denied
 </FilesMatch>
 

@@ -16,12 +16,17 @@ navegador no distingue si atrás hay Python, Node o PHP.
 """
 from __future__ import annotations
 
+import base64
 import datetime
+import hashlib
+import hmac
 import json
 import os
 import pathlib
 import threading
+import time
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 import openai
@@ -228,6 +233,283 @@ async def chat(request: Request):
             "X-Accel-Buffering": "no",  # que el proxy no acumule el stream
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# el panel de administración
+#
+# Guarda el catálogo como un commit en GitHub. Es gratis, queda versionado (cada
+# cambio se puede ver y revertir desde el repo) y el push dispara el redeploy
+# solo. La contraseña y el token viven en variables de entorno, nunca en el
+# código ni en el navegador.
+#
+#   ADMIN_PASSWORD   la contraseña del panel
+#   GITHUB_TOKEN     token con permiso `repo` para escribir el archivo
+#   GITHUB_REPO      por omisión agenciainam00-bot/GreeNova
+#   GITHUB_BRANCH    por omisión main
+# ---------------------------------------------------------------------------
+
+ARCHIVO_CATALOGO = "productos.js"
+DURACION_SESION = 8 * 3600  # segundos
+
+
+def _firma(dato: str, clave: str) -> str:
+    return hmac.new(clave.encode(), dato.encode(), hashlib.sha256).hexdigest()
+
+
+def token_nuevo(clave: str) -> str:
+    """Token con caducidad, firmado con la propia contraseña.
+
+    No hace falta base de datos ni cookies: el servidor puede verificar el token
+    recalculando la firma. Si la contraseña cambia, todas las sesiones mueren.
+    """
+    vence = str(int(time.time()) + DURACION_SESION)
+    return vence + "." + _firma(vence, clave)
+
+
+def token_valido(token: str) -> bool:
+    clave = os.environ.get("ADMIN_PASSWORD") or ""
+    if not clave or not token or "." not in token:
+        return False
+    vence, firma = token.split(".", 1)
+    if not hmac.compare_digest(firma, _firma(vence, clave)):
+        return False
+    try:
+        return int(vence) > time.time()
+    except ValueError:
+        return False
+
+
+@app.post("/api/admin/entrar")
+async def admin_entrar(request: Request):
+    clave = os.environ.get("ADMIN_PASSWORD") or ""
+    if not clave:
+        return JSONResponse({"error": "panel_sin_configurar"}, status_code=503)
+
+    try:
+        cuerpo = await request.json()
+    except Exception:
+        cuerpo = {}
+
+    dada = cuerpo.get("clave") if isinstance(cuerpo, dict) else ""
+    # compare_digest compara en tiempo constante: no deja adivinar la
+    # contraseña midiendo cuánto tarda en responder.
+    if not isinstance(dada, str) or not hmac.compare_digest(dada, clave):
+        return JSONResponse({"error": "clave_incorrecta"}, status_code=401)
+
+    return JSONResponse({"token": token_nuevo(clave), "vence_en": DURACION_SESION})
+
+
+def texto(valor, largo: int = 400) -> str:
+    return valor[:largo].strip() if isinstance(valor, str) else ""
+
+
+def render_catalogo(datos: dict) -> str:
+    """Arma el productos.js a partir de los datos del panel.
+
+    El archivo lo genera el servidor, no el navegador: así lo que se commitea
+    siempre tiene la forma correcta, aunque alguien manipule la petición.
+    """
+    cats = [
+        {"id": texto(c.get("id"), 60), "nombre": texto(c.get("nombre"), 80), "icono": texto(c.get("icono"), 60)}
+        for c in datos.get("categorias", [])
+        if isinstance(c, dict) and texto(c.get("id"), 60)
+    ]
+    ids_cat = {c["id"] for c in cats}
+
+    mats = {
+        texto(k, 60): texto(v, 80)
+        for k, v in (datos.get("materiales") or {}).items()
+        if texto(k, 60)
+    }
+
+    prods = []
+    vistos = set()
+    for p in datos.get("productos", []):
+        if not isinstance(p, dict):
+            continue
+        pid = texto(p.get("id"), 80)
+        nombre = texto(p.get("nombre"), 120)
+        cat = texto(p.get("cat"), 60)
+        if not pid or not nombre or cat not in ids_cat or pid in vistos:
+            continue
+        vistos.add(pid)
+
+        medidas = [texto(v, 120) for v in (p.get("v") or []) if texto(v, 120)]
+        precio = p.get("precio")
+        precio = float(precio) if isinstance(precio, (int, float)) and precio > 0 else None
+
+        limpio = {
+            "id": pid,
+            "nombre": nombre,
+            "cat": cat,
+            "mat": [m for m in (p.get("mat") or []) if texto(m, 60) in mats][:6],
+            "img": texto(p.get("img"), 120),
+            "p": int(p["p"]) if isinstance(p.get("p"), (int, float)) and p["p"] > 0 else None,
+            "desc": texto(p.get("desc"), 400),
+            "v": medidas or ["Estándar"],
+            "precio": precio,
+        }
+        if p.get("destacado"):
+            limpio["destacado"] = True
+        if texto(p.get("sello"), 40):
+            limpio["sello"] = texto(p.get("sello"), 40)
+        prods.append(limpio)
+
+    if not prods:
+        raise ValueError("el catálogo llegó vacío")
+
+    promos = {}
+    for pid, promo in (datos.get("promos") or {}).items():
+        if pid not in vistos or not isinstance(promo, dict):
+            continue
+        limpio = {}
+        d = promo.get("desc")
+        if isinstance(d, (int, float)) and 0 < d < 100:
+            limpio["desc"] = int(d)
+        if texto(promo.get("hasta"), 20):
+            limpio["hasta"] = texto(promo.get("hasta"), 20)
+        if texto(promo.get("nota"), 80):
+            limpio["nota"] = texto(promo.get("nota"), 80)
+        if promo.get("agotado"):
+            limpio["agotado"] = True
+        if limpio:
+            promos[pid] = limpio
+
+    j = lambda v: json.dumps(v, ensure_ascii=False)
+    hoy = datetime.date.today().isoformat()
+
+    lineas = [
+        "/* GreeNova SC - catálogo.",
+        "   ===========================================================================",
+        "   ESTE ARCHIVO LO GENERA EL PANEL (admin.html). Si lo editas a mano, el",
+        "   siguiente guardado desde el panel va a sobrescribir tus cambios.",
+        "",
+        "   Última actualización desde el panel: " + hoy,
+        "   =========================================================================== */",
+        "window.GREENOVA = (function () {",
+        '  "use strict";',
+        "",
+        "  /* Categorías del catálogo. */",
+        "  var CATEGORIAS = [",
+    ]
+    for c in cats:
+        lineas.append("    { id: %s, nombre: %s, icono: %s }," % (j(c["id"]), j(c["nombre"]), j(c["icono"])))
+    lineas[-1] = lineas[-1].rstrip(",")
+    lineas += ["  ];", "", "  /* Materiales -> etiqueta visible. */", "  var MATERIALES = {"]
+    for k, v in mats.items():
+        lineas.append("    %s: %s," % (j(k), j(v)))
+    lineas[-1] = lineas[-1].rstrip(",")
+    lineas += [
+        "  };",
+        "",
+        "  /* p = piezas por caja | v = medidas | precio en MXN por caja (null = cotizar) */",
+        "  var PRODUCTOS = [",
+    ]
+
+    for c in cats:
+        delc = [p for p in prods if p["cat"] == c["id"]]
+        if not delc:
+            continue
+        lineas.append("    /* ---------------- %s ---------------- */" % c["nombre"].lower())
+        for p in delc:
+            partes = [
+                "id: " + j(p["id"]),
+                "nombre: " + j(p["nombre"]),
+                "cat: " + j(p["cat"]),
+                "mat: " + j(p["mat"]),
+                "img: " + j(p["img"]),
+            ]
+            if p["p"]:
+                partes.append("p: " + str(p["p"]))
+            if p.get("destacado"):
+                partes.append("destacado: true")
+            if p.get("sello"):
+                partes.append("sello: " + j(p["sello"]))
+            partes.append("precio: " + (str(p["precio"]) if p["precio"] else "null"))
+            lineas.append("    { " + ", ".join(partes) + ",")
+            lineas.append("      desc: " + j(p["desc"]) + ",")
+            lineas.append("      v: " + j(p["v"]) + " },")
+        lineas.append("")
+
+    lineas += [
+        "  ];",
+        "",
+        "  /* Ofertas y existencias. desc = % de descuento | agotado = sin stock. */",
+        "  var PROMOS = " + (json.dumps(promos, ensure_ascii=False, indent=2).replace("\n", "\n  ") if promos else "{}") + ";",
+        "",
+        '  PRODUCTOS.forEach(function (p) { if (!("precio" in p)) p.precio = null; });',
+        "",
+        "  return { CATEGORIAS: CATEGORIAS, MATERIALES: MATERIALES, PRODUCTOS: PRODUCTOS, PROMOS: PROMOS };",
+        "})();",
+        "",
+    ]
+    return "\n".join(lineas)
+
+
+@app.post("/api/admin/guardar")
+async def admin_guardar(request: Request):
+    try:
+        cuerpo = await request.json()
+    except Exception:
+        cuerpo = {}
+    if not isinstance(cuerpo, dict):
+        cuerpo = {}
+
+    if not token_valido(texto(cuerpo.get("token"), 200)):
+        return JSONResponse({"error": "sesion_vencida"}, status_code=401)
+
+    token_gh = os.environ.get("GITHUB_TOKEN")
+    if not token_gh:
+        return JSONResponse({"error": "falta_github_token"}, status_code=503)
+
+    repo = os.environ.get("GITHUB_REPO") or "agenciainam00-bot/GreeNova"
+    rama = os.environ.get("GITHUB_BRANCH") or "main"
+
+    try:
+        contenido = render_catalogo(cuerpo.get("catalogo") or {})
+    except Exception as err:
+        return JSONResponse({"error": "catalogo_invalido", "detalle": str(err)}, status_code=400)
+
+    url = f"https://api.github.com/repos/{repo}/contents/{ARCHIVO_CATALOGO}"
+    cabeceras = {
+        "Authorization": "Bearer " + token_gh,
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "greenova-panel",
+    }
+
+    async with httpx.AsyncClient(timeout=30) as http:
+        # Hay que mandar el sha del archivo actual: es lo que evita pisar un
+        # cambio que alguien más hizo mientras tenías el panel abierto.
+        actual = await http.get(url, params={"ref": rama}, headers=cabeceras)
+        if actual.status_code == 401:
+            return JSONResponse({"error": "github_token_invalido"}, status_code=502)
+        if actual.status_code not in (200, 404):
+            return JSONResponse({"error": "github_" + str(actual.status_code)}, status_code=502)
+        sha = actual.json().get("sha") if actual.status_code == 200 else None
+
+        mensaje = texto(cuerpo.get("mensaje"), 120) or "Actualiza el catálogo desde el panel"
+        datos = {
+            "message": mensaje,
+            "content": base64.b64encode(contenido.encode()).decode(),
+            "branch": rama,
+        }
+        if sha:
+            datos["sha"] = sha
+
+        guardado = await http.put(url, json=datos, headers=cabeceras)
+
+    if guardado.status_code not in (200, 201):
+        print("[panel greenova] github", guardado.status_code, flush=True)
+        return JSONResponse({"error": "github_" + str(guardado.status_code)}, status_code=502)
+
+    commit = guardado.json().get("commit", {})
+    return JSONResponse({
+        "ok": True,
+        "commit": (commit.get("sha") or "")[:7],
+        "url": commit.get("html_url", ""),
+        "productos": len(cuerpo.get("catalogo", {}).get("productos", [])),
+    })
 
 
 # ---------------------------------------------------------------------------

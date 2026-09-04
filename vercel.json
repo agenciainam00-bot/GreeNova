@@ -1,16 +1,30 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo 'Sitio estático: no hay paso de build'",
+  "outputDirectory": ".",
   "functions": {
-    "api/chat.js": { "maxDuration": 30 }
+    "api/chat.js": {
+      "maxDuration": 30
+    }
   },
   "headers": [
     {
       "source": "/(.*)\\.(html|css|js|webp|svg|png)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/(robots.txt|sitemap.xml|site.webmanifest)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
     }
   ]
 }

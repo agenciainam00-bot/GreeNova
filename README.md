@@ -141,6 +141,11 @@ cambia con `OPENAI_MODEL` (por omisión `gpt-4o-mini`).
 `.htaccess` bloquea `.env`, `README.md`, `package.json` y los scripts de
 desarrollo por si acaban subidos.
 
+**Nota de Vercel:** el sitio no tiene paso de build. El script de un solo
+archivo se llama `npm run single` (no `build`) justamente para que Vercel no lo
+autodetecte y lo ejecute, y `vercel.json` además declara un `buildCommand`
+vacío. Si algún día lo renombras a `build`, el deploy va a intentar correrlo.
+
 ### Probador de logo (`serigrafia.js`)
 
 En la sección de servicios, el visitante sube su logo y lo ve estampado sobre un

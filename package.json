@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "python3 serve.py",
     "dev:api": "vercel dev",
-    "build": "python3 build-single.py"
+    "single": "python3 build-single.py",
+    "sitemap": "node build-sitemap.mjs"
   },
   "dependencies": {
     "openai": "^4.104.0"

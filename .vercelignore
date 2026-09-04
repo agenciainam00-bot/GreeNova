@@ -1,11 +1,15 @@
-# Los .php son para Hostinger; Vercel ejecuta Node. Están fuera de api/ para
-# que no choquen con api/chat.js (Vercel trata api/ como funciones, y ahí
-# chat.php y chat.js serían la misma ruta /api/chat), y además se excluyen del
-# deploy para no publicar su código fuente.
-php/
+# Vercel ejecuta el Node de api/chat.js. Todo lo de los otros hostings se queda
+# fuera para que no lo detecte como otro proyecto ni publique su código fuente.
 
-# Apache: en Vercel no hace nada.
+# Hostinger (PHP). Además viven fuera de api/ para no chocar con api/chat.js:
+# Vercel trata api/ como funciones y ahí chat.php y chat.js serían la misma ruta.
+php/
 .htaccess
+
+# Render (Python).
+main.py
+requirements.txt
+.venv/
 
 # Herramientas de desarrollo.
 serve.py

@@ -165,31 +165,47 @@ Cómo se ve impreso y no pegado encima:
   proporción sobre cada foto (`PRODUCTOS` al inicio del archivo). Para agregar
   otro producto basta con una entrada más ahí.
 
-### Desplegar en Render (Node)
+### Desplegar en Render (Python + uvicorn)
 
-Render corre un proceso Node de larga vida, así que ahí el sitio y el agente
-viven juntos: `server.js` sirve los archivos estáticos y expone `/api/chat`
-reutilizando `api/chat.js` (no hay dos copias del agente; se le arma el mismo
-contrato de Vercel antes de llamarlo).
+Render corre un proceso de larga vida, así que ahí el sitio y el agente viven
+juntos: `main.py` sirve los archivos estáticos y expone `/api/chat` con FastAPI,
+en streaming, con el mismo formato SSE que esperan las otras dos versiones.
 
 Configuración del **Web Service**:
 
 | Campo | Valor |
 |---|---|
-| Language | Node |
-| Build Command | `npm install` |
-| Start Command | `npm start` |
-| Root Directory | (vacío) |
+| Language | `Python 3` |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| Root Directory | *(vacío)* |
 
-Variables de entorno: `OPENAI_API_KEY` y, opcional, `OPENAI_MODEL`. El `PORT`
-lo pone Render solo y `server.js` lo lee.
+Variables de entorno: `OPENAI_API_KEY` y, opcional, `OPENAI_MODEL`. El `PORT` lo
+pone Render solo.
 
-El tope diario de 300 preguntas vive en memoria en esta versión: si el servicio
-se reinicia, el contador vuelve a cero. En el plan gratuito el servicio además
-se duerme por inactividad y la primera visita tarda en responder.
+El tope diario de 300 preguntas vive en memoria en esta versión, protegido con
+un candado porque uvicorn atiende varias peticiones a la vez; si el servicio se
+reinicia, el contador vuelve a cero. En el plan gratuito el servicio además se
+duerme por inactividad y la primera visita tarda en responder.
 
-`server.js` bloquea por HTTP todo lo que no es el sitio: `.env`, `php/`, `api/`,
-`node_modules`, los scripts y el propio servidor.
+`main.py` bloquea por HTTP todo lo que no es el sitio: `.env`, `php/`, `api/`,
+`.venv/`, los scripts y el propio servidor.
+
+### Las tres versiones del endpoint
+
+El agente tiene una sola lógica de negocio (los criterios y el RAG viven en el
+navegador) pero tres envoltorios de servidor, uno por tipo de hosting:
+
+| Archivo | Hosting | Cómo se llama |
+|---|---|---|
+| `main.py` | Render | `uvicorn main:app` |
+| `php/chat.php` | Hostinger | Apache + PHP |
+| `api/chat.js` | Vercel | función serverless |
+
+`ENDPOINT` en `agente-criterios.js` elige por dominio: `/api/chat` en
+`*.onrender.com` y `*.vercel.app`, `/php/chat.php` en cualquier otro. Cuando
+decidas un hosting definitivo, borra los otros dos: mantener tres copias del
+mismo endpoint solo tiene sentido mientras estés probando.
 
 ### Control de gasto
 

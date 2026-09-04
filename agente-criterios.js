@@ -34,6 +34,7 @@ window.GREENOVA_AGENTE = (function () {
     "La gente no pide las cosas como se llaman en el catálogo. Traduce siempre: \"vaso para café\" o \"vaso para bebida caliente\" es el VASO DE PAPEL; \"vaso para bebida fría\", \"vaso para frappé\" o \"vaso transparente\" es el VASO PET o PLA. Usa la lista de EQUIVALENCIAS que se te pasa en el contexto y responde con el nombre del catálogo, no con el que usó la persona.",
     "Si alguien pide algo que GreeNova no maneja (cubiertos, tenedores, cucharas, platos), dilo directo: no está en catálogo, y pásalo a ventas por si lo pueden conseguir. No lo sustituyas por otro producto como si fuera lo mismo.",
     "SÍ ENVIAMOS A TODO MÉXICO. Si preguntan por cualquier estado, ciudad o pueblo del país (Tlaxcala, Puebla, Monterrey, Mérida, Tijuana, el que sea), la respuesta es sí: GreeNova envía a nivel nacional desde la Ciudad de México. Nunca contestes que no lo tienes confirmado. Lo único que no sabes es el costo y el tiempo del envío: eso lo confirma ventas en la cotización.",
+    "Eres un vendedor, no un buscador. Si alguien describe su negocio o su necesidad en vez de pedir un producto por nombre (\"tengo una cafetería\", \"necesito para llevar\", \"vendo postres\"), recomiéndale de una vez los productos del catálogo que se usan en ese giro, con su medida. No contestes que no lo tienes confirmado: eso es solo para datos que de verdad no existen, como precios o tiempos de entrega.",
     "NUNCA escribas nombres de archivo ni rutas (tienda.html, producto.html, .php). Habla como persona: \"en la tienda\", \"en el catálogo\". El enlace se lo pone el sitio solo.",
     "Cuando alguien diga que quiere cotizar, comprar o hacer un pedido, no lo mandes a leer instrucciones. Pregúntale qué productos quiere y en qué medida, y cuántas cajas de cada uno. Si en el bloque CARRITO ya trae productos, retómalos por nombre y cantidad en vez de preguntar de cero.",
     "Cierra siempre las conversaciones de compra con el contacto directo: 55 2260 1113 o ventas@greenovasc.com.mx.",
@@ -190,6 +191,90 @@ window.GREENOVA_AGENTE = (function () {
       busca: ["compostable", "bagazo", "paja de trigo", "fecula", "tapioca"] }
   ];
 
+  /* ---------------------------------------------------------------------
+     GIROS — cómo vende un vendedor con sentido común.
+
+     Cuando alguien no pregunta por un producto sino por su NECESIDAD ("tengo
+     una cafetería", "necesito para llevar", "vendo postres"), no hay que
+     mandarlo a ventas: hay que recomendarle lo que se usa en ese giro. Esta
+     tabla es exactamente eso, y el asistente la contesta al instante y gratis.
+
+     `dice`  las palabras con las que la gente describe su negocio o su necesidad
+     `intro` la frase con la que abre la recomendación
+     `ids`   productos del catálogo, en el orden en que conviene ofrecerlos
+
+     Para agregar un giro nuevo basta con una entrada más aquí.
+     --------------------------------------------------------------------- */
+  var GIROS = [
+    { dice: ["para llevar", "se lo lleven", "se los lleven", "llevar la comida",
+             "llevarse la comida", "take out", "takeout", "to go", "delivery",
+             "a domicilio", "reparto", "paquete", "paquetes", "empacar",
+             "empaquetar", "servicio a domicilio", "pedidos en linea"],
+      intro: "Para servicio para llevar, esto es lo que más se mueve:",
+      ids: ["contenedor-kraft-rect", "almeja-bagazo", "bolsa-kraft-asa",
+            "vaso-papel-blanco", "servilleta-larga"] },
+
+    { dice: ["cafeteria", "cafetería", "coffee shop", "barista", "barra de cafe",
+             "negocio de cafe", "vendo cafe", "cafeteria nueva", "torrefactora"],
+      intro: "Para cafetería, el arranque típico es:",
+      ids: ["vaso-papel-blanco", "tapa-viajera", "fajilla-ajustable",
+            "agitador-madera", "portavaso-charola"] },
+
+    { dice: ["restaurante", "fonda", "cocina economica", "comida corrida",
+             "marisqueria", "marisquería", "cenaduria", "cenaduría"],
+      intro: "Para restaurante con servicio para llevar, lo básico es:",
+      ids: ["contenedor-kraft-rect", "contenedor-circular-kraft", "souffle-fecula",
+            "bolsa-kraft-asa", "servilleta-larga"] },
+
+    { dice: ["taqueria", "taquería", "tacos", "hamburgueseria", "hamburguesería",
+             "hamburguesas", "burger", "alitas", "boneless", "papas fritas",
+             "comida rapida", "comida rápida", "food truck", "puesto", "feria"],
+      intro: "Para taquería o comida rápida, esto es lo que se pide:",
+      ids: ["almeja-bagazo", "charola-kraft", "souffle-fecula",
+            "contenedor-kraft-rect", "servilleta-larga"] },
+
+    { dice: ["heladeria", "heladería", "nieve", "helados", "yogurt", "paleteria",
+             "paletería", "postres frios", "postres fríos"],
+      intro: "Para heladería o postres fríos:",
+      ids: ["contenedor-helado", "bowl-domo", "vaso-pet", "popote-cuchara",
+            "servilleta-larga"] },
+
+    { dice: ["pasteleria", "pastelería", "reposteria", "repostería", "panaderia",
+             "panadería", "pasteles", "postres", "brownies", "galletas"],
+      intro: "Para pastelería y repostería:",
+      ids: ["charola-pastel-redonda", "contenedor-rebanada-pastel",
+            "contenedor-bisagra", "bolsa-ventana", "papel-encerado"] },
+
+    { dice: ["jugueria", "juguería", "smoothies", "licuados", "jugos", "aguas frescas",
+             "bubble tea", "boba", "frappes", "frappés"],
+      intro: "Para jugos, licuados y bebidas frías:",
+      ids: ["vaso-pet", "vaso-pla", "tapa-fria-domo-par", "popote-tapioca",
+            "fajilla-ajustable"] },
+
+    { dice: ["ensaladas", "saludable", "poke", "bowls saludables", "fitness",
+             "comida saludable", "vegano", "veganos"],
+      intro: "Para ensaladas y bowls:",
+      ids: ["ensaladera-transparente", "bowl-domo", "contenedor-kraft-redondo",
+            "souffle-fecula", "contenedor-bisagra"] },
+
+    { dice: ["pizzeria", "pizzería", "pizzas", "pizza"],
+      intro: "Para pizzería:",
+      ids: ["caja-pizza", "caja-rebanada-pizza", "charola-kraft", "servilleta-larga"] },
+
+    { dice: ["evento", "eventos", "fiesta", "fiestas", "catering", "banquete",
+             "coffee break", "boda", "posada", "graduacion", "graduación"],
+      intro: "Para eventos y catering:",
+      ids: ["charola-paja-trigo", "vaso-papel-blanco", "vaso-pet",
+            "portavaso-charola", "servilleta-larga"] },
+
+    { dice: ["abrir un negocio", "voy a abrir", "empezando", "emprender",
+             "negocio nuevo", "que me recomiendas", "qué me recomiendas",
+             "no se que necesito", "no sé qué necesito", "asesorame", "asesórame"],
+      intro: "Depende del giro, pero lo que casi nadie deja fuera es:",
+      ids: ["vaso-papel-blanco", "tapa-viajera", "contenedor-kraft-rect",
+            "bolsa-kraft-asa", "servilleta-larga"] }
+  ];
+
   /* Preguntas sugeridas que aparecen al abrir el chat. */
   var SUGERENCIAS = [
     "¿Qué tapa va con un vaso de 12 oz?",
@@ -206,6 +291,7 @@ window.GREENOVA_AGENTE = (function () {
     CRITERIOS: CRITERIOS,
     HECHOS: HECHOS,
     SINONIMOS: SINONIMOS,
+    GIROS: GIROS,
     SUGERENCIAS: SUGERENCIAS,
     SALIDA: SALIDA,
     /* Dónde vive la función que guarda la API key. Hay dos versiones del mismo

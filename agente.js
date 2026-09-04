@@ -209,6 +209,69 @@
     };
   }
 
+  /* Un vendedor no dice "4 oz" cuando el vaso existe en seis medidas: dice el
+     rango. Si todas las variantes comparten medida (mismo tamaño, distinto
+     color), con una basta. */
+  function medida(p) {
+    if (!p.v || !p.v.length) return "";
+    var a = p.v[0].split("\u00b7")[0].trim();
+    var b = p.v[p.v.length - 1].split("\u00b7")[0].trim();
+    if (p.v.length === 1 || a === b) return a;
+
+    /* El rango solo se arma cuando las dos puntas son medidas de verdad y van
+       de menor a mayor. Con etiquetas como "Chica" o "Modelo 8A" un rango sale
+       absurdo ("de Chica a A medida"), así que ahí se dice cuántas hay. */
+    var na = parseFloat(a), nb = parseFloat(b);
+    var sonMedidas = /^\d/.test(a) && /^\d/.test(b) && !isNaN(na) && !isNaN(nb);
+    if (sonMedidas && na < nb) return "de " + a + " a " + b;
+    return p.v.length + " medidas";
+  }
+
+  /* ======================= recomendación por giro =======================
+     Antes de buscar en el catálogo palabra por palabra, se revisa si la persona
+     está describiendo su negocio o su necesidad. Ahí no hay que buscar: hay que
+     recomendar, que es lo que haría un vendedor. La tabla se edita en
+     agente-criterios.js (GIROS). */
+
+  var GIROS = (CFG.GIROS || []).map(function (g) {
+    return {
+      dice: g.dice.map(function (t) {
+        return new RegExp("(^| )" + norm(t) + "(e?s)?( |$)");
+      }),
+      intro: g.intro,
+      ids: g.ids
+    };
+  });
+
+  function respuestaGiro(pregunta) {
+    var n = norm(pregunta);
+    var giro = null;
+    for (var i = 0; i < GIROS.length && !giro; i++) {
+      for (var j = 0; j < GIROS[i].dice.length; j++) {
+        if (GIROS[i].dice[j].test(n)) { giro = GIROS[i]; break; }
+      }
+    }
+    if (!giro) return null;
+
+    var prods = giro.ids.map(function (id) {
+      return PRODS.filter(function (p) { return p.id === id; })[0];
+    }).filter(Boolean);
+    if (!prods.length) return null;
+
+    var lista = prods.map(function (p) {
+      return p.nombre.toLowerCase() + (medida(p) ? " (" + medida(p) + ")" : "");
+    });
+
+    return {
+      texto: giro.intro + " " + lista.slice(0, -1).join(", ") + " y " +
+             lista[lista.length - 1] + ". ¿Te armo la lista para cotizar? " +
+             "Dime cuántas cajas de cada uno, o marca al " + TEL + ".",
+      fuente: "Recomendación",
+      enlace: "tienda.html?cat=" + prods[0].cat,
+      enlaceTexto: "Ver estos productos"
+    };
+  }
+
   /* ======================= respuesta directa del RAG =======================
      Solo contesta sola cuando gana con holgura: el primer resultado tiene que
      superar un piso y sacarle ventaja clara al segundo. Si no, va a la IA. */
@@ -239,6 +302,42 @@
       fuente: "Catálogo",
       enlace: d.enlace,
       enlaceTexto: "Verlo en la tienda"
+    };
+  }
+
+  /* Si la búsqueda encontró varios productos pero ninguno gana con holgura, un
+     buscador se rinde y un vendedor enseña las opciones. Esto último es lo que
+     hace falta: evita mandar a la IA (y al mensaje de "no lo tengo confirmado")
+     preguntas que el catálogo sí puede responder. */
+
+  var PISO_LISTA = 4.5;
+
+  function respuestaCatalogo(pregunta, hits) {
+    if (/\b(precio|precios|cuesta|cuestan|costo|barato|caro)\b/.test(norm(pregunta))) return null;
+
+    var prods = hits.filter(function (h) {
+      return h.d.tipo === "producto" && h.s >= PISO_LISTA;
+    });
+    if (prods.length < 2) return null;
+
+    /* Solo la familia del primer resultado: si alguien pregunta por vasos de
+       café, mezclarle tapas y vasos fríos confunde en vez de ayudar. */
+    var familia = prods[0].d.prod.cat;
+    prods = prods.filter(function (h) { return h.d.prod.cat === familia; }).slice(0, 4);
+    if (prods.length < 2) return null;
+
+    var lista = prods.map(function (h) {
+      var p = h.d.prod;
+      return p.nombre.toLowerCase() + (medida(p) ? " (" + medida(p) + ")" : "");
+    });
+
+    return {
+      texto: "Para eso te sirven " + lista.slice(0, -1).join(", ") + " y " +
+             lista[lista.length - 1] + ". Dime cuál te late y de qué medida, y " +
+             "te armo la lista para cotizar.",
+      fuente: "Catálogo",
+      enlace: "tienda.html?cat=" + prods[0].d.prod.cat,
+      enlaceTexto: "Ver en la tienda"
     };
   }
 
@@ -326,6 +425,13 @@
       return;
     }
 
+    var giro = respuestaGiro(texto);
+    if (giro) {
+      burbuja("bot", giro.texto, giro);
+      historial.push({ role: "assistant", content: giro.texto });
+      return;
+    }
+
     var hits = buscar(texto, 5);
     var local = respuestaLocal(texto, hits);
 
@@ -334,6 +440,13 @@
       historial.push({ role: "assistant", content: local.texto });
       return;
     }
+    var catalogo = respuestaCatalogo(texto, hits);
+    if (catalogo) {
+      burbuja("bot", catalogo.texto, catalogo);
+      historial.push({ role: "assistant", content: catalogo.texto });
+      return;
+    }
+
     consultarIA(texto, hits);
   }
 

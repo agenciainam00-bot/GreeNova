@@ -207,6 +207,25 @@ navegador) pero tres envoltorios de servidor, uno por tipo de hosting:
 decidas un hosting definitivo, borra los otros dos: mantener tres copias del
 mismo endpoint solo tiene sentido mientras estés probando.
 
+### Cómo contesta el agente, en orden
+
+Antes de gastar un token, el navegador intenta resolver la pregunta con el
+catálogo. Solo lo que no cabe en estos cuatro pasos llega a la IA:
+
+1. **Intención de compra** — "quiero cotizar", "qué llevo en el carrito": lee el
+   carrito de localStorage y contesta con lo que la persona ya eligió.
+2. **Giro del negocio** (`GIROS` en `agente-criterios.js`) — "tengo una
+   cafetería", "necesito para llevar", "vendo postres": recomienda de una vez
+   los productos que se usan en ese giro, con su medida. Es la parte que hace
+   que el asistente venda en vez de buscar.
+3. **Respuesta directa** — cuando un solo producto o hecho gana con holgura.
+4. **Lista del catálogo** — cuando varios productos de la misma familia
+   coinciden y ninguno gana solo, los enseña todos en vez de rendirse.
+
+Recién en el quinto paso entra la IA, con los pasajes que encontró el RAG. Por
+eso el asistente sigue siendo útil aunque no haya API key: los cuatro primeros
+pasos no cuestan nada y cubren la mayoría de las preguntas reales.
+
 ### Control de gasto
 
 Tres números, todos en el encabezado de `php/chat.php`:

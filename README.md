@@ -165,6 +165,32 @@ Cómo se ve impreso y no pegado encima:
   proporción sobre cada foto (`PRODUCTOS` al inicio del archivo). Para agregar
   otro producto basta con una entrada más ahí.
 
+### Desplegar en Render (Node)
+
+Render corre un proceso Node de larga vida, así que ahí el sitio y el agente
+viven juntos: `server.js` sirve los archivos estáticos y expone `/api/chat`
+reutilizando `api/chat.js` (no hay dos copias del agente; se le arma el mismo
+contrato de Vercel antes de llamarlo).
+
+Configuración del **Web Service**:
+
+| Campo | Valor |
+|---|---|
+| Language | Node |
+| Build Command | `npm install` |
+| Start Command | `npm start` |
+| Root Directory | (vacío) |
+
+Variables de entorno: `OPENAI_API_KEY` y, opcional, `OPENAI_MODEL`. El `PORT`
+lo pone Render solo y `server.js` lo lee.
+
+El tope diario de 300 preguntas vive en memoria en esta versión: si el servicio
+se reinicia, el contador vuelve a cero. En el plan gratuito el servicio además
+se duerme por inactividad y la primera visita tarda en responder.
+
+`server.js` bloquea por HTTP todo lo que no es el sitio: `.env`, `php/`, `api/`,
+`node_modules`, los scripts y el propio servidor.
+
 ### Control de gasto
 
 Tres números, todos en el encabezado de `php/chat.php`:

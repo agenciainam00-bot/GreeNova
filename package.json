@@ -5,6 +5,7 @@
   "description": "Sitio de GreeNova SC. El sitio es estático; esta dependencia es solo para la función del agente en api/chat.js.",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "dev": "python3 serve.py",
     "dev:api": "vercel dev",
     "single": "python3 build-single.py",
@@ -12,5 +13,8 @@
   },
   "dependencies": {
     "openai": "^4.104.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

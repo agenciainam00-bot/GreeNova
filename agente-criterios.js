@@ -208,9 +208,9 @@ window.GREENOVA_AGENTE = (function () {
     SINONIMOS: SINONIMOS,
     SUGERENCIAS: SUGERENCIAS,
     SALIDA: SALIDA,
-    /* Dónde vive la función que guarda la API key. En Hostinger es el archivo
-       PHP; si algún día se despliega en Vercel, cámbialo a "/api/chat".
-       Ver README. */
-    ENDPOINT: "/api/chat.php"
+    /* Dónde vive la función que guarda la API key. Hostinger corre PHP y Vercel
+       corre Node, así que cada uno tiene su archivo y aquí se elige por dominio.
+       El mismo código funciona en los dos sin tocar nada. Ver README. */
+    ENDPOINT: /(^|\.)vercel\.app$/.test(location.hostname) ? "/api/chat" : "/api/chat.php"
   };
 })();

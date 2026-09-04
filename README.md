@@ -191,9 +191,15 @@ OpenAI, porque cambian.
 El agente se prueba en modo RAG, que es la mitad que importa afinar. Para probar
 el nivel de IA hace falta subirlo a Hostinger, o levantar `php -S` si tienes PHP.
 
-`api/chat.js` es la misma función para Vercel (Node), por si algún día se mueve
-el hosting; no estorba y Hostinger la ignora. Si la usas, cambia `ENDPOINT` en
-`agente-criterios.js` de `/api/chat.php` a `/api/chat`.
+`api/chat.js` es la misma función para Vercel (Node). No hay que elegir: el
+`ENDPOINT` en `agente-criterios.js` se decide por dominio, así que en un dominio
+`*.vercel.app` usa `/api/chat` y en cualquier otro (Hostinger) usa
+`/api/chat.php`.
+
+`.vercelignore` saca los `.php` del deploy de Vercel. Sin eso el build falla:
+Vercel toma todo lo que hay en `api/` como funciones, y `chat.php` y `chat.js`
+resuelven a la misma ruta `/api/chat` ("conflicting paths"). Hostinger, al
+revés, simplemente ignora el `.js`.
 
 `vercel.json` y `package.json` son inofensivos si se suben; Hostinger los ignora.
 
